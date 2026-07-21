@@ -107,12 +107,26 @@ npm run dev
 | `server/data/chat.db` | SQLite 聊天记录 |
 | `server/uploads/{roomId}/` | 该房间上传的图片/文件 |
 
-## 部署到阿里云（后续）
+## 部署到阿里云（leylish.work）
 
-- 前端 `npm run build` 后由 Nginx 托管 `client/dist`  
-- 反向代理 `/api` 与 `/socket.io` 到 Node 服务  
-- 公网 IP 需 **HTTPS 自签证书** 才能使用 WebRTC 音视频  
-- 若 P2P 不通，在同一 ECS 部署 **coturn**  
+完整步骤见 **[deploy/DEPLOY.md](deploy/DEPLOY.md)**。
+
+### 快速流程
+
+1. **域名实名** + DNS 添加 A 记录 `@` 和 `www` → ECS 公网 IP  
+2. **安全组** 放行 80、443  
+3. SSH 登录 ECS，执行：
+
+```bash
+cd /opt
+git clone https://github.com/3154067760/ChatWithYou.git
+cd ChatWithYou
+sudo DOMAIN=leylish.work EMAIL=你的邮箱 bash deploy/setup-ubuntu.sh
+```
+
+4. 访问 **https://leylish.work**
+
+> 语音/视频需要 HTTPS；证书由 Let's Encrypt 免费提供，自动续期。
 
 ## API 摘要
 
