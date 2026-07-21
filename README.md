@@ -30,17 +30,17 @@ npm run start:lan
 终端会显示：
 
 ```
-手机/局域网访问: http://192.168.2.17:3001
+手机/局域网访问: http://192.168.2.17:3010
 ```
 
-**手机浏览器打开：`http://192.168.2.17:3001`**（注意是 **3001**，不是 5173）
+**手机浏览器打开：`http://192.168.2.17:3010`**（注意是 **3010**，不是 5173）
 
 | 场景 | 命令 | 电脑地址 | 手机地址 |
 |------|------|----------|----------|
 | 开发调试 | `npm run dev` | http://localhost:5173 | http://192.168.2.17:5173（需防火墙） |
-| 手机联调 | `npm run start:lan` | http://localhost:3001 | **http://192.168.2.17:3001** |
+| 手机联调 | `npm run start:lan` | http://localhost:3010 | **http://192.168.2.17:3010** |
 
-> `5173` 是 Vite 开发服务器；`start:lan` 把网页和后端都放在 **3001**，手机更稳定。
+> `5173` 是 Vite 开发服务器；`start:lan` 把网页和后端都放在 **3010**，手机更稳定。
 
 ## 本地测试
 
@@ -58,7 +58,7 @@ npm run install:all
 npm run dev
 ```
 
-`npm run dev` 会先自动释放 3001/5173/5174 端口，避免「端口被占用」报错。
+`npm run dev` 会先自动释放 3010/5173/5174 端口，避免「端口被占用」报错。
 
 若仍有问题，手动执行：
 
@@ -71,7 +71,7 @@ npm run dev
 
 也可分两个终端启动：
 
-**终端 A — 后端（端口 3001）**
+**终端 A — 后端（端口 3010）**
 
 ```bash
 cd server
@@ -118,8 +118,8 @@ npm run dev
 3. SSH 登录 ECS，执行：
 
 ```bash
-cd /opt
-git clone https://github.com/3154067760/ChatWithYou.git
+cd ~
+git clone https://gitee.com/qq3154067760qq_com/ChatWithYou.git
 cd ChatWithYou
 sudo DOMAIN=leylish.work EMAIL=你的邮箱 bash deploy/setup-ubuntu.sh
 ```

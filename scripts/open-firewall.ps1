@@ -1,5 +1,5 @@
 # Run once as Administrator to allow LAN access
-$ports = @(3001, 5173)
+$ports = @(3010, 5173)
 foreach ($port in $ports) {
   $name = "ChatWithYou TCP $port"
   netsh advfirewall firewall show rule name="$name" 2>$null | Out-Null
@@ -10,4 +10,4 @@ foreach ($port in $ports) {
     Write-Host "Rule exists: $name"
   }
 }
-Write-Host "Done. Phone URL: http://YOUR_PC_IP:3001"
+Write-Host "Done. Phone URL: http://YOUR_PC_IP:3010"

@@ -43,26 +43,28 @@ nslookup leylish.work
 
 ## 三、服务器一键部署（Ubuntu 22/24）
 
-SSH 登录 ECS 后执行：
+SSH 登录 ECS（用户 `admin`）后执行：
 
 ```bash
-# 1. 克隆项目（或 git pull 更新）
-sudo apt update
-sudo apt install -y git curl
-
-cd /opt
-sudo git clone https://github.com/3154067760/ChatWithYou.git
+# 1. 克隆到用户目录（不要用 /opt，与现有项目保持一致）
+cd ~
+git clone https://gitee.com/qq3154067760qq_com/ChatWithYou.git
 cd ChatWithYou
+
+# 若已克隆，更新代码：
+# cd ~/ChatWithYou && git pull
 
 # 2. 运行部署脚本（把邮箱改成你的）
 sudo DOMAIN=leylish.work EMAIL=你的邮箱@example.com bash deploy/setup-ubuntu.sh
 ```
 
+> **项目路径：** `/home/admin/ChatWithYou`（即 `~/ChatWithYou`）。本机 3001 已被 File Bridge 占用，ChatWithYou 固定使用 **3010**。
+
 脚本会自动：
 
-- 安装 Node.js 20、Nginx、Certbot、PM2  
+- 安装 Node.js **22+**（需内置 `node:sqlite`）、Nginx、Certbot、PM2  
 - `npm install` + 构建前端  
-- PM2 启动后端（端口 3001）  
+- PM2 启动后端（端口 3010）  
 - 配置 Nginx 反向代理  
 - 申请 Let's Encrypt 免费 HTTPS 证书  
 
@@ -80,10 +82,10 @@ https://www.leylish.work
 若不用脚本，按顺序执行：
 
 ```bash
-cd /opt/ChatWithYou
+cd ~/ChatWithYou
 npm run install:all
 npm run build
-cd server && pm2 start index.js --name chatwithyou && pm2 save
+cd server && PORT=3010 pm2 start index.js --name chatwithyou && pm2 save
 ```
 
 Nginx 配置见 `deploy/nginx-leylish.work.conf`，证书：
@@ -97,11 +99,13 @@ sudo certbot --nginx -d leylish.work -d www.leylish.work
 ## 五、更新代码
 
 ```bash
-cd /opt/ChatWithYou
+cd ~/ChatWithYou
 git pull
 npm run install:all
 npm run build
-pm2 restart chatwithyou
+pm2 delete chatwithyou 2>/dev/null || true
+cd server && PORT=3010 pm2 start index.js --name chatwithyou
+pm2 save
 ```
 
 ---
@@ -113,7 +117,8 @@ pm2 restart chatwithyou
 | 域名打不开 | 检查实名、DNS、安全组 80/443 |
 | 证书申请失败 | 确认 DNS 已生效，`nslookup leylish.work` 正确 |
 | 能开网页但无语音视频 | 必须用 `https://`，不能用 `http://` |
-| WebRTC 连不通 | 部署 coturn（见下方） |
+| 502 / curl 3010 失败 | `pm2 logs chatwithyou` 看报错；3001 被 File Bridge 占用，必须 `PORT=3010` 启动 |
+| `No such built-in module: node:sqlite` | 升级 Node 22.5+：`curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo apt install -y nodejs` |
 
 ### WebRTC 穿透（可选）
 
@@ -133,8 +138,8 @@ sudo systemctl enable coturn && sudo systemctl start coturn
 
 | 路径 | 说明 |
 |------|------|
-| `/opt/ChatWithYou` | 项目代码 |
-| `/opt/ChatWithYou/server/data/` | 聊天记录 |
-| `/opt/ChatWithYou/server/uploads/` | 上传文件 |
+| `~/ChatWithYou` | 项目代码（`/home/admin/ChatWithYou`） |
+| `~/ChatWithYou/server/data/` | 聊天记录 |
+| `~/ChatWithYou/server/uploads/` | 上传文件 |
 
 建议定期备份 `server/data` 和 `server/uploads`。

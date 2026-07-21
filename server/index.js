@@ -19,7 +19,7 @@ import {
 } from './db.js';
 import { translateText, translateBatch, normalizeLang } from './translate.js';
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3010;
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -401,7 +401,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`手机/局域网访问: http://${lanIp}:${PORT}`);
   }
   if (!fs.existsSync(clientDist)) {
-    console.log('提示: 手机访问请用 npm run start:lan（会构建前端并由 3001 统一提供）');
+    console.log('提示: 手机访问请用 npm run start:lan（会构建前端并由 3010 统一提供）');
   }
 });
 

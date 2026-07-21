@@ -25,9 +25,9 @@ export default defineConfig({
     strictPort: true,
     hmr: false,
     proxy: {
-      '/api': 'http://127.0.0.1:3001',
+      '/api': 'http://127.0.0.1:3010',
       '/socket.io': {
-        target: 'http://127.0.0.1:3001',
+        target: 'http://127.0.0.1:3010',
         ws: true,
       },
     },

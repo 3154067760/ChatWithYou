@@ -25,10 +25,16 @@ echo "==> 安装依赖..."
 apt-get update -qq
 apt-get install -y curl git nginx certbot python3-certbot-nginx
 
-if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 20 ] 2>/dev/null; then
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 22 ] 2>/dev/null; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
+
+node -e "require('node:sqlite')" 2>/dev/null || {
+  echo "错误: 需要 Node.js >= 22.5（内置 node:sqlite）"
+  node -v
+  exit 1
+}
 
 if ! command -v pm2 >/dev/null 2>&1; then
   npm install -g pm2
@@ -42,7 +48,7 @@ npm run build
 echo "==> 启动 PM2..."
 cd "$APP_DIR/server"
 pm2 delete chatwithyou 2>/dev/null || true
-pm2 start index.js --name chatwithyou
+PORT=3010 pm2 start index.js --name chatwithyou
 pm2 save
 pm2 startup systemd -u "${SUDO_USER:-root}" --hp "/root" 2>/dev/null || pm2 startup
 
