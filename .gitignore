@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+
+# 构建产物（部署时在服务器 build）
+client/dist/
+server/dist/
+*.tsbuildinfo
+
+# 本地数据与上传文件
+server/data/
+server/uploads/
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db

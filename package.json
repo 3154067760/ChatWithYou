@@ -1,0 +1,17 @@
+{
+  "name": "chatwithyou",
+  "private": true,
+  "scripts": {
+    "stop": "npx kill-port 3001 5173 5174",
+    "predev": "npm run stop",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "firewall": "powershell -ExecutionPolicy Bypass -File scripts/open-firewall.ps1",
+    "start:lan": "npm run build --prefix client && npm run stop && npm run start --prefix server",
+    "install:all": "npm install --prefix server && npm install --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "kill-port": "^2.0.1"
+  }
+}
