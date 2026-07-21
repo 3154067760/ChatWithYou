@@ -24,9 +24,32 @@ input {
 }
 
 .home {
+  position: relative;
   max-width: 480px;
   margin: 0 auto;
   padding: 48px 16px;
+}
+
+.locale-toggle {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.locale-toggle-fixed {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .hero h1 {
@@ -343,6 +366,14 @@ button:disabled {
   display: grid;
   grid-template-rows: 1fr auto;
   z-index: 20;
+}
+
+.remote-audio {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .video-grid {

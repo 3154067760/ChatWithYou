@@ -1,7 +1,10 @@
+import type { UiLocale } from './i18n';
+
 const VISITOR_ID_KEY = 'chatwithyou_visitor_id';
 const VISITOR_NAME_KEY = 'chatwithyou_visitor_name';
 const LANG_KEY = 'chatwithyou_lang';
 const AUTO_TRANSLATE_KEY = 'chatwithyou_auto_translate';
+const UI_LOCALE_KEY = 'chatwithyou_ui_locale';
 
 function createId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -68,6 +71,15 @@ export function setStoredAutoTranslate(on: boolean) {
   safeSetItem(AUTO_TRANSLATE_KEY, on ? '1' : '0');
 }
 
+export function getStoredUiLocale(): UiLocale {
+  const v = safeGetItem(UI_LOCALE_KEY);
+  return v === 'en' ? 'en' : 'zh';
+}
+
+export function setStoredUiLocale(locale: UiLocale) {
+  safeSetItem(UI_LOCALE_KEY, locale);
+}
+
 export function formatFileSize(bytes?: number): string {
   if (bytes == null) return '';
   if (bytes < 1024) return `${bytes} B`;
@@ -75,10 +87,10 @@ export function formatFileSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function formatTime(iso: string): string {
+export function formatTime(iso: string, locale: UiLocale = 'zh'): string {
   const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('zh-CN', {
+  return d.toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',

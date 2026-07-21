@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { CallType, ChatMessage, WebRTCSignalPayload } from '../types';
-
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-];
+import { getIceServers } from '../webrtc-config';
 
 interface UseChatOptions {
   roomId: string;
@@ -114,13 +110,13 @@ export function useWebRTC(
 ) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const remoteStreamRef = useRef<MediaStream | null>(null);
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
-  const pendingOfferRef = useRef<(RTCSessionDescriptionInit & { callType?: CallType }) | null>(
-    null
-  );
+  const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
 
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [mediaConnected, setMediaConnected] = useState(false);
   const [callState, setCallState] = useState<
     'idle' | 'calling' | 'incoming' | 'active'
   >('idle');
@@ -138,9 +134,11 @@ export function useWebRTC(
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
+    remoteStreamRef.current = null;
     pendingOfferRef.current = null;
     setLocalStream(null);
     setRemoteStream(null);
+    setMediaConnected(false);
     setCallState('idle');
     setIncomingCall(null);
     setMuted(false);
@@ -148,12 +146,33 @@ export function useWebRTC(
     pendingCandidates.current = [];
   }, []);
 
+  const syncRemoteStream = useCallback(() => {
+    const stream = remoteStreamRef.current;
+    setRemoteStream(stream ? new MediaStream(stream.getTracks()) : null);
+  }, []);
+
   const createPeerConnection = useCallback(() => {
     if (pcRef.current) return pcRef.current;
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: getIceServers() });
     pc.ontrack = (ev) => {
-      const stream = ev.streams[0] ?? new MediaStream([ev.track]);
-      setRemoteStream(stream);
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+      }
+      const track = ev.track;
+      if (!remoteStreamRef.current.getTracks().some((t) => t.id === track.id)) {
+        remoteStreamRef.current.addTrack(track);
+      }
+      track.onunmute = () => syncRemoteStream();
+      syncRemoteStream();
+    };
+    pc.oniceconnectionstatechange = () => {
+      const ok = pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed';
+      setMediaConnected(ok);
+    };
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        setMediaConnected(false);
+      }
     };
     pc.onicecandidate = (ev) => {
       if (ev.candidate) {
@@ -165,13 +184,17 @@ export function useWebRTC(
     };
     pcRef.current = pc;
     return pc;
-  }, [socketRef]);
+  }, [socketRef, syncRemoteStream]);
 
   const attachLocalTracks = useCallback(
     async (callType: CallType, pc: RTCPeerConnection) => {
       if (localStreamRef.current) return localStreamRef.current;
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
         video: callType === 'video',
       });
       localStreamRef.current = stream;
@@ -193,6 +216,19 @@ export function useWebRTC(
     pendingCandidates.current = [];
   }, []);
 
+  const waitForIceGathering = useCallback((pc: RTCPeerConnection) => {
+    if (pc.iceGatheringState === 'complete') return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      const timeout = window.setTimeout(resolve, 3000);
+      pc.onicegatheringstatechange = () => {
+        if (pc.iceGatheringState === 'complete') {
+          window.clearTimeout(timeout);
+          resolve();
+        }
+      };
+    });
+  }, []);
+
   const startCall = useCallback(
     async (callType: CallType) => {
       if (!enabled || callState !== 'idle') return;
@@ -204,15 +240,17 @@ export function useWebRTC(
 
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        await waitForIceGathering(pc);
 
+        const sdp = pc.localDescription ?? offer;
         socketRef.current?.emit('call-event', { event: 'start', callType });
-        socketRef.current?.emit('webrtc-signal', { type: 'offer', sdp: offer, callType });
+        socketRef.current?.emit('webrtc-signal', { type: 'offer', sdp, callType });
       } catch (e) {
         cleanupCall();
         throw e;
       }
     },
-    [attachLocalTracks, callState, cleanupCall, createPeerConnection, enabled, socketRef]
+    [attachLocalTracks, callState, cleanupCall, createPeerConnection, enabled, socketRef, waitForIceGathering]
   );
 
   const acceptCall = useCallback(async () => {
@@ -225,11 +263,14 @@ export function useWebRTC(
       setIncomingCall(null);
 
       const pc = createPeerConnection();
-      await pc.setRemoteDescription(offer);
       await attachLocalTracks(callType, pc);
+      await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socketRef.current?.emit('webrtc-signal', { type: 'answer', sdp: answer });
+      await waitForIceGathering(pc);
+
+      const sdp = pc.localDescription ?? answer;
+      socketRef.current?.emit('webrtc-signal', { type: 'answer', sdp });
       socketRef.current?.emit('call-event', { event: 'accept', callType });
       await flushCandidates(pc);
       pendingOfferRef.current = null;
@@ -237,7 +278,7 @@ export function useWebRTC(
       cleanupCall();
       throw e;
     }
-  }, [attachLocalTracks, cleanupCall, createPeerConnection, flushCandidates, incomingCall, socketRef]);
+  }, [attachLocalTracks, cleanupCall, createPeerConnection, flushCandidates, incomingCall, socketRef, waitForIceGathering]);
 
   const rejectCall = useCallback(() => {
     socketRef.current?.emit('call-event', { event: 'reject' });
@@ -273,7 +314,7 @@ export function useWebRTC(
       if (payload.from === selfId) return;
 
       if (payload.type === 'offer' && payload.sdp) {
-        pendingOfferRef.current = { ...payload.sdp, callType: payload.callType };
+        pendingOfferRef.current = payload.sdp;
         pendingCandidates.current = [];
         setIncomingCall({
           from: payload.from || '',
@@ -324,6 +365,7 @@ export function useWebRTC(
   return {
     localStream,
     remoteStream,
+    mediaConnected,
     callState,
     incomingCall,
     activeCallType,

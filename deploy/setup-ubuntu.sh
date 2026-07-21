@@ -40,17 +40,17 @@ if ! command -v pm2 >/dev/null 2>&1; then
   npm install -g pm2
 fi
 
-echo "==> 安装项目依赖并构建..."
-cd "$APP_DIR"
-npm run install:all
-npm run build
+DEPLOY_USER="${SUDO_USER:-root}"
+DEPLOY_HOME="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+
+echo "==> 安装项目依赖并构建（用户: ${DEPLOY_USER}）..."
+chown -R "${DEPLOY_USER}:${DEPLOY_USER}" "$APP_DIR"
+sudo -u "$DEPLOY_USER" bash -c "cd '$APP_DIR' && npm run install:all && npm run build"
 
 echo "==> 启动 PM2..."
-cd "$APP_DIR/server"
-pm2 delete chatwithyou 2>/dev/null || true
-PORT=3010 pm2 start index.js --name chatwithyou
-pm2 save
-pm2 startup systemd -u "${SUDO_USER:-root}" --hp "/root" 2>/dev/null || pm2 startup
+sudo -u "$DEPLOY_USER" bash -c "cd '$APP_DIR/server' && pm2 delete chatwithyou 2>/dev/null || true; PORT=3010 pm2 start index.js --name chatwithyou"
+sudo -u "$DEPLOY_USER" pm2 save
+sudo -u "$DEPLOY_USER" pm2 startup systemd -u "$DEPLOY_USER" --hp "$DEPLOY_HOME" 2>/dev/null || true
 
 echo "==> 配置 Nginx..."
 sed "s/leylish.work/${DOMAIN}/g" "$APP_DIR/deploy/nginx-leylish.work.conf" \

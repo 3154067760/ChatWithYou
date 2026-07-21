@@ -1,3 +1,4 @@
+import type { UiLocale } from '../i18n';
 import type { ChatMessage } from '../types';
 import { formatFileSize, formatTime } from '../utils';
 
@@ -6,9 +7,10 @@ interface Props {
   selfId: string;
   translation?: string;
   showTranslation?: boolean;
+  locale: UiLocale;
 }
 
-export function MessageBubble({ message, selfId, translation, showTranslation }: Props) {
+export function MessageBubble({ message, selfId, translation, showTranslation, locale }: Props) {
   const isSelf = message.senderId === selfId;
   const isSystem = message.type === 'system';
 
@@ -30,7 +32,7 @@ export function MessageBubble({ message, selfId, translation, showTranslation }:
     <div className={`msg-row ${isSelf ? 'self' : 'peer'}`}>
       <div className="msg-meta">
         {!isSelf && <span className="msg-name">{message.senderName}</span>}
-        <span className="msg-time">{formatTime(message.createdAt)}</span>
+        <span className="msg-time">{formatTime(message.createdAt, locale)}</span>
       </div>
       <div className={`msg-bubble ${isSelf ? 'self' : 'peer'}`}>
         {message.type === 'text' && (

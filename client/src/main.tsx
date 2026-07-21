@@ -1,6 +1,7 @@
 import { Component, ReactNode, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import { I18nProvider } from './i18n';
 import './styles.css';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -14,10 +15,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
     if (this.state.error) {
       return (
         <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-          <h2>页面加载出错</h2>
+          <h2>页面加载出错 / Failed to load page</h2>
           <p>{this.state.error}</p>
           <button type="button" onClick={() => window.location.reload()}>
-            刷新重试
+            刷新 / Reload
           </button>
         </div>
       );
@@ -28,8 +29,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <I18nProvider>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </I18nProvider>
   </StrictMode>
 );

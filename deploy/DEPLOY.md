@@ -118,19 +118,31 @@ pm2 save
 | 证书申请失败 | 确认 DNS 已生效，`nslookup leylish.work` 正确 |
 | 能开网页但无语音视频 | 必须用 `https://`，不能用 `http://` |
 | 502 / curl 3010 失败 | `pm2 logs chatwithyou` 看报错；3001 被 File Bridge 占用，必须 `PORT=3010` 启动 |
+| `EACCES permission denied`（npm/build） | 之前用 `sudo` 装过依赖，属主变成 root。执行 `sudo chown -R admin:admin ~/ChatWithYou` 后重跑 `npm run install:all && npm run build` |
 | `No such built-in module: node:sqlite` | 升级 Node 22.5+：`curl -fsSL https://deb.nodesource.com/setup_22.x \| sudo -E bash - && sudo apt install -y nodejs` |
 
-### WebRTC 穿透（可选）
+### WebRTC 穿透（语音/视频必需）
 
-若两人无法建立音视频，在 ECS 安装 coturn：
+两人不在同一 WiFi 时，仅靠 STUN 往往不够（国内 Google STUN 也不稳定）。**必须部署 coturn**：
 
 ```bash
 sudo apt install -y coturn
-# 编辑 /etc/turnserver.conf，设置 external-ip=你的公网IP
-sudo systemctl enable coturn && sudo systemctl start coturn
+sudo cp ~/ChatWithYou/deploy/coturn.conf /etc/turnserver.conf
+sudo systemctl enable coturn
+sudo systemctl restart coturn
+sudo systemctl status coturn
 ```
 
-安全组额外放行：**3478** TCP/UDP，**49152-65535** UDP。
+**阿里云安全组**额外放行：
+
+| 端口 | 协议 | 说明 |
+|------|------|------|
+| 3478 | TCP + UDP | TURN 信令 |
+| 49152-65535 | UDP | TURN 媒体中继 |
+
+部署后重新构建前端（`npm run build`），客户端会自动使用 `turn:leylish.work:3478`。
+
+若通话界面一直显示「正在建立音频连接…」，说明 TURN 未生效或防火墙未放行。
 
 ---
 
