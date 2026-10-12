@@ -1,3 +1,5 @@
+import { uniqueWordPairs } from './gamePairs';
+
 export type Tone = 1 | 2 | 3 | 4;
 
 export type PinyinSectionId =
@@ -182,7 +184,38 @@ export const SYLLABLE_QUIZ: { pinyin: string; char: string; wrong: string[] }[] 
   { pinyin: 'xué', char: '学', wrong: ['xuē', 'xuě', 'xuè'] },
   { pinyin: 'yī', char: '一', wrong: ['yí', 'yǐ', 'yì'] },
   { pinyin: 'sì', char: '四', wrong: ['sī', 'sí', 'sǐ'] },
-  { pinyin: 'wǒ', char: '我', wrong: ['wō', 'wó', 'wǒ'] },
+  { pinyin: 'wǒ', char: '我', wrong: ['wō', 'wó', 'wò'] },
+  { pinyin: 'nǐ', char: '你', wrong: ['nī', 'ní', 'nì'] },
+  { pinyin: 'tā', char: '他', wrong: ['tā', 'tá', 'tǎ'] },
+  { pinyin: 'hē', char: '喝', wrong: ['hé', 'hě', 'hè'] },
+  { pinyin: 'kàn', char: '看', wrong: ['kān', 'kǎn', 'kàn'] },
+  { pinyin: 'tīng', char: '听', wrong: ['tíng', 'tǐng', 'tìng'] },
+  { pinyin: 'shuō', char: '说', wrong: ['shuó', 'shuǒ', 'shuò'] },
+  { pinyin: 'xiǎo', char: '小', wrong: ['xiāo', 'xiáo', 'xiào'] },
+  { pinyin: 'duō', char: '多', wrong: ['duó', 'duǒ', 'duò'] },
+  { pinyin: 'shǎo', char: '少', wrong: ['shāo', 'sháo', 'shào'] },
+  { pinyin: 'shàng', char: '上', wrong: ['shāng', 'shǎng', 'shàng'] },
+  { pinyin: 'xià', char: '下', wrong: ['xiā', 'xiá', 'xià'] },
+  { pinyin: 'zhōng', char: '中', wrong: ['zhōng', 'zhóng', 'zhòng'] },
+  { pinyin: 'guó', char: '国', wrong: ['guō', 'guǒ', 'guò'] },
+  { pinyin: 'shān', char: '山', wrong: ['shān', 'shán', 'shàn'] },
+  { pinyin: 'huó', char: '火', wrong: ['huō', 'huó', 'huò'] },
+  { pinyin: 'sān', char: '三', wrong: ['sān', 'sán', 'sǎn'] },
+  { pinyin: 'wǔ', char: '五', wrong: ['wū', 'wú', 'wǔ'] },
+  { pinyin: 'liù', char: '六', wrong: ['liū', 'liú', 'liǔ'] },
+  { pinyin: 'shí', char: '十', wrong: ['shī', 'shí', 'shì'] },
+  { pinyin: 'māo', char: '猫', wrong: ['máo', 'mǎo', 'mào'] },
+  { pinyin: 'gǒu', char: '狗', wrong: ['gōu', 'góu', 'gòu'] },
+  { pinyin: 'chē', char: '车', wrong: ['chē', 'ché', 'chě'] },
+  { pinyin: 'lái', char: '来', wrong: ['lāi', 'lái', 'lài'] },
+  { pinyin: 'qù', char: '去', wrong: ['qū', 'qú', 'qù'] },
+  { pinyin: 'bù', char: '不', wrong: ['bū', 'bú', 'bù'] },
+  { pinyin: 'shì', char: '是', wrong: ['shī', 'shí', 'shì'] },
+  { pinyin: 'hěn', char: '很', wrong: ['hēn', 'hén', 'hèn'] },
+  { pinyin: 'ài', char: '爱', wrong: ['āi', 'ǎi', 'ài'] },
+  { pinyin: 'lěng', char: '冷', wrong: ['lēng', 'lěng', 'lèng'] },
+  { pinyin: 'rè', char: '热', wrong: ['rē', 'ré', 'rè'] },
+  { pinyin: 'jiàn', char: '见', wrong: ['jiān', 'jiǎn', 'jiàn'] },
 ];
 
 export const TONE_QUIZ: { base: string; char: string; tone: Tone; options: Tone[] }[] = [
@@ -196,6 +229,44 @@ export const TONE_QUIZ: { base: string; char: string; tone: Tone; options: Tone[
   { base: 'ren', char: '人', tone: 2, options: [1, 2, 3, 4] },
   { base: 'chi', char: '吃', tone: 1, options: [1, 2, 3, 4] },
   { base: 'xue', char: '学', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'wo', char: '我', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'ni', char: '你', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'ta', char: '他', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'shang', char: '上', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'xia', char: '下', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'zhong', char: '中', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'guo', char: '国', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'shan', char: '山', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'he', char: '河', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'ri', char: '日', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'yue', char: '月', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'huo', char: '火', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'yi', char: '一', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'san', char: '三', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'si', char: '四', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'wu', char: '五', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'liu', char: '六', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'qi', char: '七', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'ba', char: '八', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'jiu', char: '九', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'shi', char: '十', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'shou', char: '手', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'xin', char: '心', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'hong', char: '红', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'lan', char: '蓝', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'mao', char: '猫', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'gou', char: '狗', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'che', char: '车', tone: 1, options: [1, 2, 3, 4] },
+  { base: 'lai', char: '来', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'qu', char: '去', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'shi', char: '是', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'hen', char: '很', tone: 3, options: [1, 2, 3, 4] },
+  { base: 'ai', char: '爱', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'leng', char: '冷', tone: 3, options: [1, 2, 3, 4] },
+  { base: 're', char: '热', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'jian', char: '见', tone: 4, options: [1, 2, 3, 4] },
+  { base: 'ming', char: '明', tone: 2, options: [1, 2, 3, 4] },
+  { base: 'nian', char: '年', tone: 2, options: [1, 2, 3, 4] },
 ];
 
 export const TONE_LABELS: Record<Tone, string> = {
@@ -220,6 +291,7 @@ export function collectAudioTasks(): { outFile: string; text: string }[] {
   const chars = new Set<string>();
   for (const q of SYLLABLE_QUIZ) chars.add(q.char);
   for (const q of TONE_QUIZ) chars.add(q.char);
+  for (const p of uniqueWordPairs()) chars.add(p.hanzi);
   for (const ch of chars) {
     tasks.push({ outFile: `quiz/${encodeURIComponent(ch)}.mp3`, text: ch });
   }

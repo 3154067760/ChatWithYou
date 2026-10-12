@@ -54,7 +54,7 @@ export const ui = {
   bubbleListen: 'Pop the bubble for',
   bubbleOver: (score: number) => `Great run! Score: ${score}`,
   snapTitle: 'Snap Judge',
-  snapSub: '12 cards — is hanzi + pinyin a real pair?',
+  snapSub: '16 cards — is hanzi + pinyin a real pair?',
   snapYes: '✓ Match',
   snapNo: '✗ Nope',
   snapCorrect: 'Right!',

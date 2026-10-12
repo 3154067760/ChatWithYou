@@ -5,7 +5,7 @@ import { ui } from '../i18n/strings';
 import { unlockAudio } from '../utils/audioUnlock';
 import { GameShell } from './GameShell';
 
-const TOTAL = 12;
+const TOTAL = 16;
 
 type Props = {
   onBack: () => void;
@@ -57,7 +57,7 @@ export function SnapMatchGame({ onBack, speakChar, onStar }: Props) {
       const newCorrect = correct + (ok ? 1 : 0);
       if (nextIndex >= TOTAL) {
         setCorrect(newCorrect);
-        if (newCorrect >= 8) onStar();
+        if (newCorrect >= 11) onStar();
         sounds.win();
         setIndex(TOTAL);
         return;

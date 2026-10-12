@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { buildBubbleRoundFromQuiz } from '../data/gameContent';
+import { buildBubbleRoundMixed } from '../data/gameContent';
 import { useGameSounds } from '../hooks/useGameSounds';
 import { ui } from '../i18n/strings';
 import { unlockAudio } from '../utils/audioUnlock';
@@ -16,7 +16,7 @@ type Props = {
 export function BubblePopGame({ onBack, speakChar, onStar }: Props) {
   const sounds = useGameSounds();
   const [timeLeft, setTimeLeft] = useState(DURATION);
-  const [round, setRound] = useState(buildBubbleRoundFromQuiz);
+  const [round, setRound] = useState(buildBubbleRoundMixed);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [running, setRunning] = useState(true);
@@ -24,7 +24,7 @@ export function BubblePopGame({ onBack, speakChar, onStar }: Props) {
   const [flash, setFlash] = useState<'ok' | 'bad' | null>(null);
 
   const nextRound = useCallback(() => {
-    const r = buildBubbleRoundFromQuiz();
+    const r = buildBubbleRoundMixed();
     setRound(r);
     setPopId(null);
     speakChar(r.target.hanzi);
