@@ -1,5 +1,5 @@
 {
-  "name": "chatwithyou",
+  "name": "pinyin-paradise",
   "private": true,
   "scripts": {
     "stop": "npx kill-port 3010 5173 5174",
@@ -9,10 +9,12 @@
     "start:prod": "npm run build --prefix client && npm run start --prefix server",
     "firewall": "powershell -ExecutionPolicy Bypass -File scripts/open-firewall.ps1",
     "start:lan": "npm run build --prefix client && npm run stop && npm run start --prefix server",
-    "install:all": "npm install --prefix server && npm install --prefix client"
+    "install:all": "npm install --prefix server && npm install --prefix client",
+    "generate:audio": "npx tsx scripts/generate-pinyin-audio.ts"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
-    "kill-port": "^2.0.1"
+    "kill-port": "^2.0.1",
+    "tsx": "^4.19.2"
   }
 }
