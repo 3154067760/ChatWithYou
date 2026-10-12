@@ -8,6 +8,7 @@ import {
   type PinyinSectionId,
   type Tone,
 } from './data/pinyin';
+import { CheckInCalendar } from './components/CheckInCalendar';
 import { GamesHub } from './components/GamesHub';
 import { PinyinCard } from './components/PinyinCard';
 import { StoryReader } from './components/StoryReader';
@@ -19,6 +20,7 @@ import { useSpeech } from './hooks/useSpeech';
 import { LEARNER_NAME } from './config';
 import { TONE_LABELS_EN, ui } from './i18n/strings';
 import { addStars, getStars } from './utils';
+import { countCheckInsInMonth, isCheckedInOn, recordDailyCheckIn, toDateKey } from './utils/checkIn';
 
 type Screen =
   | 'home'
@@ -30,7 +32,8 @@ type Screen =
   | 'games'
   | 'game-bubble'
   | 'game-snap'
-  | 'game-climb';
+  | 'game-climb'
+  | 'checkin';
 
 export default function App() {
   const { speakPinyin, speakChar, speakStoryLine, speakStoryAll } = useSpeech();
@@ -46,7 +49,20 @@ export default function App() {
   const [toneQ, setToneQ] = useState(() => pickRandom(TONE_QUIZ));
   const [toneFeedback, setToneFeedback] = useState<string | null>(null);
   const [gameToast, setGameToast] = useState<string | null>(null);
+  const [checkInTick, setCheckInTick] = useState(0);
   const toneOptions = useMemo(() => shuffle(toneQ.options), [toneQ]);
+
+  const todayKey = toDateKey(new Date());
+  const monthCheckIns = useMemo(() => {
+    void checkInTick;
+    const n = new Date();
+    return countCheckInsInMonth(n.getFullYear(), n.getMonth());
+  }, [checkInTick]);
+
+  useEffect(() => {
+    recordDailyCheckIn();
+    setCheckInTick((t) => t + 1);
+  }, []);
 
   const awardGameWin = () => {
     setStars(addStars(3));
@@ -105,6 +121,9 @@ export default function App() {
 
       <p className="welcome-line">{ui.welcome(LEARNER_NAME)}</p>
       <p className="stars-line">{ui.progress(stars)}</p>
+      <p className="checkin-home-line">
+        {ui.homeCheckInLine(monthCheckIns, isCheckedInOn(todayKey))}
+      </p>
 
       <div className="menu-grid">
         <button type="button" className="menu-card menu-learn" onClick={() => setScreen('learn')}>
@@ -138,6 +157,11 @@ export default function App() {
           <span className="menu-icon">🎮</span>
           <strong>{ui.menuGamesTitle}</strong>
           <small>{ui.menuGamesDesc}</small>
+        </button>
+        <button type="button" className="menu-card menu-checkin" onClick={() => setScreen('checkin')}>
+          <span className="menu-icon">📅</span>
+          <strong>{ui.menuCheckInTitle}</strong>
+          <small>{ui.menuCheckInDesc}</small>
         </button>
       </div>
     </div>
@@ -280,6 +304,14 @@ export default function App() {
       {screen === 'tone' && tone}
       {screen === 'stories' && stories}
       {screen === 'story' && story}
+      {screen === 'checkin' && (
+        <CheckInCalendar
+          onBack={() => {
+            setCheckInTick((t) => t + 1);
+            setScreen('home');
+          }}
+        />
+      )}
       {screen === 'games' && (
         <GamesHub onBack={() => setScreen('home')} onPick={(id) => setScreen(`game-${id}`)} />
       )}

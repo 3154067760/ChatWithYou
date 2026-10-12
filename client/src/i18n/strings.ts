@@ -17,6 +17,22 @@ export const ui = {
   menuStoriesDesc: 'Read with pinyin & listen line by line',
   menuGamesTitle: 'Arcade',
   menuGamesDesc: 'Three quick games — listen, match, climb',
+  menuCheckInTitle: 'Monthly check-in',
+  menuCheckInDesc: 'See which days you practiced this month',
+  checkInTitle: 'Check-in calendar',
+  checkInTip: 'Green days mean you practiced or tapped check-in. Data stays on this device.',
+  checkInMonthCount: (n: number) => `${n} day${n === 1 ? '' : 's'} this month`,
+  checkInTodayDone: '✓ Checked in today',
+  checkInTodayBtn: 'Check in today',
+  checkInSuccess: 'Nice — today is marked!',
+  checkInPrev: 'Previous month',
+  checkInNext: 'Next month',
+  checkInLegend: 'Practiced that day',
+  checkInDayDone: 'Checked in',
+  homeCheckInLine: (monthDays: number, today: boolean) =>
+    today
+      ? `📅 This month: ${monthDays} check-in${monthDays === 1 ? '' : 's'} · Today ✓`
+      : `📅 This month: ${monthDays} check-in${monthDays === 1 ? '' : 's'}`,
   storiesTitle: 'Short stories',
   storiesTip: 'Choose a story. Each line shows Chinese + pinyin. Tap to hear.',
   storyTapLine: 'Tap to play 🔊',

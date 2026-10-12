@@ -1,3 +1,5 @@
+import { recordDailyCheckIn } from './utils/checkIn';
+
 const STARS_KEY = 'pinyin_progress_stars';
 
 /** Simple progress counter for this browser (one learner). */
@@ -11,6 +13,7 @@ export function getStars(): number {
 }
 
 export function addStars(n: number) {
+  if (n > 0) recordDailyCheckIn();
   const next = getStars() + n;
   try {
     localStorage.setItem(STARS_KEY, String(next));
