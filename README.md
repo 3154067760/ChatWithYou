@@ -7,13 +7,13 @@ A **personal** English UI web app to teach **one learner** Hanyu Pinyin: chart, 
 Edit `client/src/config.ts`:
 
 ```ts
-export const LEARNER_NAME = 'Alex';
+export const LEARNER_NAME = 'Leyla';
 ```
 
 Or when building:
 
 ```bash
-VITE_LEARNER_NAME=Alex npm run build --prefix client
+VITE_LEARNER_NAME=Leyla npm run build --prefix client
 ```
 
 ## Features
