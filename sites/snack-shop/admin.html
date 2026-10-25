@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#ffffff">
+<title>商家后台 · 宿舍补给站</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%9C%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<div id="dashView" hidden>
+
+  <header class="top">
+    <div class="top-left">
+      <span class="logo">🍜</span>
+      <div class="top-title">
+        <strong>商家后台</strong>
+        <small id="shopName">宿舍补给站</small>
+      </div>
+    </div>
+    <div class="top-right">
+      <a class="btn-ghost" href="index.html" target="_blank" rel="noopener">顾客页</a>
+      <span class="live" id="liveTag"><i></i>实时</span>
+      <button class="btn-ghost" id="refreshBtn" type="button">刷新</button>
+      <button class="btn-ghost" id="logoutBtn" type="button">退出</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="stats">
+      <div class="stat stat-hot">
+        <span>待接单</span>
+        <strong id="stPending">0</strong>
+      </div>
+      <div class="stat">
+        <span>今日订单</span>
+        <strong id="stToday">0</strong>
+      </div>
+      <div class="stat">
+        <span>今日营业额</span>
+        <strong id="stRevenue">¥0</strong>
+      </div>
+    </section>
+
+    <div class="head-row">
+      <nav class="mtabs" id="mtabs">
+        <button class="mtab on" data-tab="orders" type="button">订单</button>
+        <button class="mtab" data-tab="products" type="button">商品</button>
+        <button class="mtab" data-tab="settings" type="button">收款码</button>
+      </nav>
+      <span class="upd" id="updAt"></span>
+    </div>
+
+    <section id="ordersPanel">
+      <div class="filters" id="filters"></div>
+      <div id="orderList" class="orders"></div>
+    </section>
+
+    <section id="productsPanel" hidden>
+      <details class="add-box">
+        <summary>＋ 新增商品</summary>
+        <form id="addForm" class="add-form" novalidate>
+          <input id="npEmoji" maxlength="4" placeholder="🍪" aria-label="图标">
+          <input id="npName" placeholder="商品名，如 好丽友薯愿" aria-label="商品名">
+          <select id="npCat" aria-label="分类"></select>
+          <input id="npSpec" placeholder="规格，如 45g/罐" aria-label="规格">
+          <input id="npPrice" type="number" min="0.1" step="0.1" placeholder="价格" aria-label="价格">
+          <input id="npUnit" maxlength="4" placeholder="单位，如 袋" aria-label="单位">
+          <input id="npStock" type="number" min="0" step="1" value="20" placeholder="库存" aria-label="库存">
+          <button type="submit" class="btn-main">添加</button>
+        </form>
+      </details>
+
+      <p class="panel-hint">点商品左侧的图片就能上传 / 更换照片（会自动压缩），有照片时点「还原」回到 emoji。</p>
+      <div id="productList" class="products"></div>
+    </section>
+
+    <section id="settingsPanel" hidden>
+      <div class="panel-card">
+        <h3>微信收款码</h3>
+        <p class="panel-sub">
+          顾客下单后会看到这张图，扫码付钱给你。用微信「我 → 服务 → 收付款 → 二维码收款」截图就行，
+          收款到账直接进你的微信零钱。
+        </p>
+
+        <div class="qr-box">
+          <img id="qrPreview" alt="微信收款码" hidden>
+          <span class="qr-none" id="qrNone">还没有上传收款码</span>
+        </div>
+
+        <div class="qr-actions">
+          <label class="btn-main" for="qrFile">上传 / 更换收款码</label>
+          <input id="qrFile" type="file" accept="image/*" hidden>
+          <button class="btn-line btn-danger" id="qrDelete" type="button" disabled>删除</button>
+        </div>
+
+        <p class="panel-note">
+          上传后，顾客付完钱点「我已付款」，订单会显示「待确认收款」；
+          你核对微信账单后点「确认收款」，这笔就算结清了。
+          个人收款码没有自动对账，金额大时记得自己看一眼账单。
+        </p>
+      </div>
+
+      <div class="panel-card">
+        <h3>邮件通知</h3>
+        <p class="panel-sub">
+          新订单、顾客付款时，自动发邮件到你的邮箱。<br>
+          QQ 邮箱要先在「设置 → 账号 → POP3/IMAP/SMTP 服务」里开启 SMTP，生成一个
+          <b>授权码</b>（不是 QQ 密码），填在下面。
+        </p>
+
+        <div class="mail-banner" id="mailBanner">还没配置</div>
+
+        <div class="mail-grid">
+          <label class="mail-field">
+            <span>收件邮箱</span>
+            <input id="mailTo" type="email" placeholder="3154067760@qq.com" autocomplete="off">
+          </label>
+          <label class="mail-field">
+            <span>发件邮箱</span>
+            <input id="mailFrom" type="email" placeholder="留空 = 和收件邮箱相同" autocomplete="off">
+          </label>
+          <label class="mail-field">
+            <span>SMTP 授权码</span>
+            <input id="mailPass" type="password" placeholder="QQ 邮箱的授权码" autocomplete="new-password">
+          </label>
+        </div>
+
+        <details class="mail-adv">
+          <summary>高级：SMTP 服务器与端口</summary>
+          <div class="mail-grid">
+            <label class="mail-field">
+              <span>服务器</span>
+              <input id="mailHost" placeholder="smtp.qq.com" autocomplete="off">
+            </label>
+            <label class="mail-field">
+              <span>端口</span>
+              <input id="mailPort" type="number" placeholder="465" autocomplete="off">
+            </label>
+          </div>
+        </details>
+
+        <div class="mail-events">
+          <label class="check"><input type="checkbox" id="mailNew" checked> 新订单</label>
+          <label class="check"><input type="checkbox" id="mailPaid" checked> 顾客付款</label>
+          <label class="check"><input type="checkbox" id="mailEnabled" checked> 开启邮件通知</label>
+        </div>
+
+        <div class="qr-actions">
+          <button id="mailSave" class="btn-main" type="button">保存</button>
+          <button id="mailTest" class="btn-line" type="button">发送测试邮件</button>
+        </div>
+
+        <p class="panel-note" id="mailStatus">还没有配置</p>
+
+        <details class="mail-help">
+          <summary>怎么拿 QQ 邮箱授权码？</summary>
+          <ol>
+            <li>电脑打开 <b>mail.qq.com</b>，登录你的 QQ 邮箱</li>
+            <li>右上角「设置」→「账号」（新版：账号与安全 → 安全设置）</li>
+            <li>开启「POP3/SMTP 服务」，按提示发短信验证</li>
+            <li>得到一串 16 位<b>授权码</b>，复制到上面的输入框</li>
+            <li>确认「开启邮件通知」是勾上的，点保存，再点「发送测试邮件」</li>
+          </ol>
+        </details>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 连不上服务器时显示 -->
+<div class="boot-error" id="bootError" hidden>
+  <span class="be-icon">⚠️</span>
+  <h2>连不上服务器</h2>
+  <p id="bootErrorText">请先双击「启动服务器.bat」，再打开这个页面。</p>
+  <a class="btn-main" href="login.html">去登录页</a>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

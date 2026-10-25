@@ -1,0 +1,7 @@
+# 订单、商品数据（含顾客手机号，不要上传）
+data/
+
+# 其他
+node_modules/
+*.log
+.DS_Store

@@ -97,4 +97,20 @@ HTTPS：`sudo certbot --nginx -d leylish.work -d www.leylish.work`
 | `~/ChatWithYou` | 项目代码 |
 | `client/public/audio` | 拼音与故事 MP3（可生成） |
 | `client/dist` | 构建产物（`.gitignore`，部署时在服务器生成） |
-
+
+---
+
+## 八、零食小站（sites/snack-shop）
+
+独立进程，端口 **3020**，挂在 `https://leylish.work/snack/`，和拼音小乐园互不影响。
+
+完整步骤见 `deploy/SNACK-DEPLOY.md`，最少三步：
+
+```bash
+cd ~/ChatWithYou && git pull
+pm2 start deploy/snack-shop.ecosystem.js && pm2 save
+# 把 deploy/nginx-snack.conf 的 location 加到 nginx 配置，sudo nginx -t && sudo systemctl reload nginx
+```
+
+顾客：`https://leylish.work/snack/`
+商家：`https://leylish.work/snack/admin.html`（账号 gyq / root，上线前务必改密码）
