@@ -376,7 +376,8 @@
         : '<span class="pay-tag pay-unpaid">未收款</span>';
 
     var items = o.items.map(function (i) {
-      return '<li><span class="q">×' + i.qty + '</span><span class="n">' + esc(i.name) + '</span>' +
+      return '<li><span class="q">×' + i.qty + '</span><span class="n">' + esc(i.name) +
+        (i.cooked ? '<em class="cook-mark">泡好</em>' : '') + '</span>' +
         '<span class="p">¥' + money(i.price * i.qty) + '</span></li>';
     }).join('');
 
@@ -392,6 +393,7 @@
         '<div class="o-info">' +
           '送至 <b>' + esc(o.build) + ' ' + esc(o.room) + '</b>　·　' + esc(o.phone) +
           '<br>' + o.items.length + ' 种 / ' + o.items.reduce(function (n, i) { return n + i.qty; }, 0) + ' 件' +
+          (o.cookFee ? ' · 泡好 ¥' + money(o.cookFee) : '') +
           (o.note ? '<div class="o-note">备注：' + esc(o.note) + '</div>' : '') +
         '</div>' +
         '<div class="o-foot">' +
@@ -495,6 +497,10 @@
           '" data-role="price" aria-label="' + esc(p.name) + ' 的价格"></label>' +
         '<label class="p-stock">库存<input type="number" min="0" step="1" value="' + (Number(p.stock) || 0) +
           '" data-role="stock" aria-label="' + esc(p.name) + ' 的库存">件</label>' +
+        (p.cat === 'noodle'
+          ? '<label class="p-cook"><input type="checkbox" data-role="cookable"' +
+              (p.cookable !== false ? ' checked' : '') + '> 可泡好</label>'
+          : '') +
         '<label class="p-sold"><input type="checkbox" data-role="soldout"' +
           (p.soldOut ? ' checked' : '') + '> 售罄</label>' +
         '<button class="p-del" type="button" data-act="del-product" aria-label="删除">✕</button>' +
@@ -613,6 +619,14 @@
       }
       api('/api/products/' + encodeURIComponent(id), { method: 'PUT', body: { stock: stock } })
         .then(function () { toast('库存已改为 ' + stock + ' 件'); loadProducts(); })
+        .catch(function (err) { handleError(err); loadProducts(); });
+      return;
+    }
+
+    if (role === 'cookable') {
+      var cookable = e.target.checked;
+      api('/api/products/' + encodeURIComponent(id), { method: 'PUT', body: { cookable: cookable } })
+        .then(function () { toast(cookable ? '已支持泡好' : '已关闭泡好'); loadProducts(); })
         .catch(function (err) { handleError(err); loadProducts(); });
       return;
     }

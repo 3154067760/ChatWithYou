@@ -21,6 +21,7 @@ window.SHOP = {
   minOrder: 8,          // 起送价（元）
   deliveryFee: 1.5,     // 配送费（元）
   freeDeliveryAt: 15,   // 满多少元免配送费
+  cookFee: 1,           // 泡面「泡好送上门」每份加价
   openHour: 9,          // 每天几点开始接单
   closeHour: 23,        // 每天几点截单
   phone: '138-0000-0000',

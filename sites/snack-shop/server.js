@@ -179,7 +179,8 @@ function notifyOrder(order, kind, req) {
   const shop = loadConfig().shop;
   const title = kind === 'paid' ? '顾客说已付款' : '新订单';
   const items = order.items.map(function (i) {
-    return '· ' + i.name + ' ×' + i.qty + '  ¥' + round2(i.price * i.qty).toFixed(2);
+    return '· ' + i.name + ' ×' + i.qty + (i.cooked ? '（泡好）' : '') + '  ¥' +
+      round2(i.price * i.qty).toFixed(2);
   }).join('\r\n');
 
   const host = String((req && req.headers.host) || 'localhost').replace(/[^\w.:\-\[\]]/g, '');
@@ -188,6 +189,7 @@ function notifyOrder(order, kind, req) {
     '',
     '订单号：' + order.no,
     '金额： ¥' + round2(order.total).toFixed(2) + (order.fee ? '（含配送费 ¥' + round2(order.fee).toFixed(2) + '）' : '（免配送费）'),
+    (order.cookFee ? '泡好服务费： ¥' + round2(order.cookFee).toFixed(2) : ''),
     '',
     '商品：',
     items,
@@ -376,6 +378,7 @@ function publicOrder(o) {
     payment: { status: (o.payment && o.payment.status) || 'unpaid' },
     items: o.items,
     goods: o.goods,
+    cookFee: o.cookFee || 0,
     fee: o.fee,
     total: o.total,
     build: o.build,
@@ -435,6 +438,8 @@ async function createOrder(req, res) {
   const shop = cfg.shop;
   const lines = [];
   let goods = 0;
+  let cookFeeTotal = 0;
+  const unitCookFee = Number(shop.cookFee);
 
   for (const it of items) {
     const id = String(it && it.id || '');
@@ -454,7 +459,14 @@ async function createOrder(req, res) {
       });
     }
 
-    goods += product.price * qty;
+    // 只有泡面类支持「泡好送上门」，后台可以单独关掉某个商品
+    const cookable = product.cat === 'noodle' && product.cookable !== false;
+    const cooked = !!(it && it.cooked) && cookable;
+    const lineCookFee = cooked && Number.isFinite(unitCookFee) ? unitCookFee : 0;
+
+    goods += product.price * qty + lineCookFee * qty;
+    cookFeeTotal += lineCookFee * qty;
+
     lines.push({
       id: product.id,
       name: product.name,
@@ -464,10 +476,13 @@ async function createOrder(req, res) {
       cat: product.cat,
       price: product.price,
       qty: qty,
+      cooked: cooked,
+      cookFee: lineCookFee,
     });
   }
 
   goods = round2(goods);
+  cookFeeTotal = round2(cookFeeTotal);
   if (goods < shop.minOrder) {
     return sendJSON(res, 400, { error: '还差 ¥' + round2(shop.minOrder - goods) + ' 才到起送价' });
   }
@@ -491,6 +506,7 @@ async function createOrder(req, res) {
     no: makeOrderNo(),
     items: lines,
     goods: goods,
+    cookFee: cookFeeTotal,
     fee: fee,
     total: total,
     build: build,
@@ -813,14 +829,27 @@ async function handleApi(req, res, pathname, url) {
     if (no && no.charAt(0) !== '#') no = '#' + no;
 
     if (!/^1[3-9]\d{9}$/.test(phone)) return sendJSON(res, 400, { error: '手机号填得不对' });
-    if (!/^#\d{6}-\d{4}$/.test(no)) return sendJSON(res, 400, { error: '订单号格式像 #261025-1234' });
+    if (no && !/^#\d{6}-\d{4}$/.test(no)) {
+      return sendJSON(res, 400, { error: '订单号填错了，或者留空只填手机号' });
+    }
 
-    const order = store.orders.filter(function (o) {
-      return o.phone === phone && String(o.no).toUpperCase() === no;
-    })[0];
+    // 只填手机号也能查：返回这个号码最近的订单（最新的在前）
+    const list = store.orders
+      .filter(function (o) { return o.phone === phone && (!no || String(o.no).toUpperCase() === no); })
+      .sort(function (a, b) { return b.createdAt - a.createdAt; })
+      .slice(0, 10);
 
-    if (!order) return sendJSON(res, 404, { error: '没找到这个订单，核对一下手机号和订单号' });
-    return sendJSON(res, 200, { order: publicOrder(order), token: order.token });
+    if (!list.length) {
+      return sendJSON(res, 404, {
+        error: no ? '没找到这个订单，核对一下手机号和订单号' : '这个手机号还没下过单',
+      });
+    }
+
+    return sendJSON(res, 200, {
+      orders: list.map(function (o) {
+        return Object.assign(publicOrder(o), { token: o.token });
+      }),
+    });
   }
 
   // 顾客点「我已付款」（公开，凭不可猜的订单 id）
@@ -934,6 +963,7 @@ async function handleApi(req, res, pathname, url) {
       unit: String(body.unit || '份').trim().slice(0, 6) || '份',
       emoji: String(body.emoji || '🛒').trim().slice(0, 8) || '🛒',
       stock: body.stock === undefined ? 20 : stock,
+      cookable: body.cookable !== false,
       sales: 0,
       soldOut: false,
       desc: String(body.desc || '').trim().slice(0, 80),
@@ -963,6 +993,7 @@ async function handleApi(req, res, pathname, url) {
         product.price = round2(price);
       }
       if ('soldOut' in body) product.soldOut = !!body.soldOut;
+      if ('cookable' in body) product.cookable = !!body.cookable;
 
       if ('stock' in body) {
         const stock = Number(body.stock);

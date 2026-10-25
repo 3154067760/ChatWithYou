@@ -19,6 +19,7 @@
   rebuildById();
 
   var KEY_CART = 'sb_cart_v2';
+  var KEY_COOKED = 'sb_cooked_v1';
   var KEY_MY_ORDERS = 'sb_myorders_v1';
   var apiMode = false;
   var PAY_QR = false;
@@ -26,6 +27,7 @@
 
   var state = {
     cart: readJSON(KEY_CART, {}),
+    cooked: readJSON(KEY_COOKED, {}),
     cat: 'all',
     view: 'cart',        // cart | checkout | success
     lastOrder: null,
@@ -34,6 +36,7 @@
   };
 
   if (!state.cart || typeof state.cart !== 'object' || Array.isArray(state.cart)) state.cart = {};
+  if (!state.cooked || typeof state.cooked !== 'object' || Array.isArray(state.cooked)) state.cooked = {};
 
   /* ---------------- 小工具 ---------------- */
   function $(sel) { return document.querySelector(sel); }
@@ -133,8 +136,28 @@
     return cartList().reduce(function (n, i) { return n + i.qty; }, 0);
   }
 
-  function goodsTotal() {
+  function goodsBase() {
     return cartList().reduce(function (n, i) { return n + i.p.price * i.qty; }, 0);
+  }
+
+  function cookFeeOf(p) {
+    if (!p || p.cat !== 'noodle' || p.cookable === false) return 0;
+    var fee = Number(SHOP.cookFee);
+    return Number.isFinite(fee) ? fee : 1;
+  }
+
+  function isCooked(id) {
+    return !!state.cooked[id];
+  }
+
+  function cookTotal() {
+    return cartList().reduce(function (n, i) {
+      return n + (isCooked(i.p.id) ? cookFeeOf(i.p) * i.qty : 0);
+    }, 0);
+  }
+
+  function goodsTotal() {
+    return goodsBase() + cookTotal();
   }
 
   function feeOf(goods) {
@@ -145,7 +168,11 @@
     if (!BY_ID[id]) return;
     qty = Math.max(0, Math.min(99, qty));
     if (qty) state.cart[id] = qty;
-    else delete state.cart[id];
+    else {
+      delete state.cart[id];
+      delete state.cooked[id];
+      writeJSON(KEY_COOKED, state.cooked);
+    }
     writeJSON(KEY_CART, state.cart);
   }
 
@@ -181,6 +208,7 @@
           '<div class="name-row">' +
             '<span class="name">' + esc(p.name) + '</span>' +
             (p.badge && !sold ? '<span class="tag">' + tagText(p.badge) + '</span>' : '') +
+            (cookFeeOf(p) > 0 && !sold ? '<span class="tag tag--cook">可泡好</span>' : '') +
           '</div>' +
           '<div class="spec">' + esc(p.spec) + ' · 已售 ' + p.sales + '</div>' +
           '<div class="price-row"><span class="price">¥' + price(p.price) + '</span>' +
@@ -230,6 +258,7 @@
   function renderBar() {
     var count = cartCount();
     var goods = goodsTotal();
+    var cook = cookTotal();
     var fee = count ? feeOf(goods) : 0;
     var total = goods + fee;
     var short = Math.max(0, SHOP.minOrder - goods);
@@ -241,9 +270,9 @@
     } else if (short > 0) {
       $('#sumHint').textContent = '还差 ¥' + price(short) + ' 起送';
     } else if (fee > 0) {
-      $('#sumHint').textContent = '含配送费 ¥' + money(fee);
+      $('#sumHint').textContent = (cook > 0 ? '泡好 ¥' + money(cook) + ' · ' : '') + '含配送费 ¥' + money(fee);
     } else {
-      $('#sumHint').textContent = '已免配送费';
+      $('#sumHint').textContent = cook > 0 ? '含泡好 ¥' + money(cook) : '已免配送费';
     }
 
     var badge = $('#cartCount');
@@ -258,13 +287,25 @@
   /* ---------------- 弹层 ---------------- */
   function ciHTML(it) {
     var p = it.p;
+    var fee = cookFeeOf(p);
+    var cooked = isCooked(p.id);
+    var lineTotal = p.price * it.qty + (cooked ? fee * it.qty : 0);
+
+    var cookToggle = fee > 0
+      ? '<label class="cook-toggle">' +
+          '<input type="checkbox" data-role="cook" data-id="' + p.id + '"' + (cooked ? ' checked' : '') + '>' +
+          '<span>泡好送上门 <b>+¥' + price(fee) + '/份</b></span>' +
+        '</label>'
+      : '';
+
     return '' +
       '<div class="ci">' +
         picHTML(p) +
         '<div class="meta">' +
           '<div class="name-row"><span class="name">' + esc(p.name) + '</span></div>' +
           '<div class="spec">¥' + price(p.price) + ' / ' + esc(p.unit) + '</div>' +
-          '<div class="price-row"><span class="price">¥' + money(p.price * it.qty) + '</span></div>' +
+          '<div class="price-row"><span class="price">¥' + money(lineTotal) + '</span></div>' +
+          cookToggle +
         '</div>' +
         stepHTML(p, it.qty) +
         '<button class="ci-del" type="button" data-act="del" data-id="' + p.id + '" aria-label="删除">✕</button>' +
@@ -272,10 +313,15 @@
   }
 
   function cartFootHTML(goods, fee, total, short) {
+    var cook = cookTotal();
+    var bits = [];
+    if (cook > 0) bits.push('含泡好 ¥' + money(cook));
+    bits.push(fee ? '含配送费 ¥' + money(fee) : '已免配送费');
+
     return '' +
       '<div class="foot-row">' +
         '<div class="foot-total">合计（' + cartCount() + ' 件）<b>¥' + money(total) + '</b>' +
-          '<em>' + (fee ? '含配送费 ¥' + money(fee) : '已免配送费') + '</em></div>' +
+          '<em>' + bits.join(' · ') + '</em></div>' +
       '</div>' +
       '<button class="btn-primary" type="button" data-act="to-checkout"' + (short > 0 ? ' disabled' : '') + '>' +
         (short > 0 ? '还差 ¥' + price(short) + ' 起送' : '去结算') +
@@ -317,10 +363,15 @@
   }
 
   function checkoutFootHTML(fee, total) {
+    var cook = cookTotal();
+    var bits = [];
+    if (cook > 0) bits.push('含泡好 ¥' + money(cook));
+    bits.push(fee ? '含配送费 ¥' + money(fee) : '已免配送费');
+
     return '' +
       '<div class="foot-row">' +
         '<div class="foot-total">应付<b>¥' + money(total) + '</b>' +
-          '<em>' + (fee ? '含配送费 ¥' + money(fee) : '已免配送费') + '</em></div>' +
+          '<em>' + bits.join(' · ') + '</em></div>' +
       '</div>' +
       '<button class="btn-primary" type="button" data-act="submit">提交订单</button>';
   }
@@ -488,13 +539,15 @@
   /* ---------------- 小票 ---------------- */
   function receiptText(o) {
     var lines = o.items.map(function (i) {
-      return '· ' + i.name + ' ×' + i.qty + '　¥' + money(i.price * i.qty);
+      return '· ' + i.name + ' ×' + i.qty + (i.cooked ? '（泡好）' : '') + '　¥' + money(i.price * i.qty);
     });
     var when = o.timeText || timeText(o.createdAt || Date.now());
+    var cookFee = Number(o.cookFee || 0);
 
     return '【' + SHOP.name + '】新订单\n' +
       '订单号：' + o.no + '\n' +
       lines.join('\n') + '\n' +
+      (cookFee ? '泡好服务费：¥' + money(cookFee) + '\n' : '') +
       '合计：¥' + money(o.total) + (o.fee ? '（含配送费 ¥' + money(o.fee) + '）' : '（免配送费）') + '\n' +
       '楼栋：' + o.build + ' ' + o.room + '\n' +
       '电话：' + o.phone + '\n' +
@@ -513,9 +566,18 @@
       no: '#' + String(d.getFullYear()).slice(2) + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
         '-' + String(Math.floor(1000 + Math.random() * 9000)),
       items: items.map(function (i) {
-        return { name: i.p.name, price: i.p.price, qty: i.qty, unit: i.p.unit };
+        var cooked = isCooked(i.p.id) && cookFeeOf(i.p) > 0;
+        return {
+          name: i.p.name,
+          price: i.p.price,
+          qty: i.qty,
+          unit: i.p.unit,
+          cooked: cooked,
+          cookFee: cooked ? cookFeeOf(i.p) : 0
+        };
       }),
       goods: goods,
+      cookFee: cookTotal(),
       fee: fee,
       total: goods + fee,
       build: payload.build,
@@ -587,7 +649,9 @@
     }
 
     var payload = {
-      items: items.map(function (i) { return { id: i.p.id, qty: i.qty }; }),
+      items: items.map(function (i) {
+        return { id: i.p.id, qty: i.qty, cooked: isCooked(i.p.id) && cookFeeOf(i.p) > 0 };
+      }),
       build: ($('#fBuild').value || '').trim(),
       room: ($('#fRoom').value || '').trim(),
       phone: ($('#fPhone').value || '').replace(/[\s-]/g, ''),
@@ -662,6 +726,17 @@
         writeJSON(KEY_CART, state.cart);
         toast('有商品库存变了，购物车已更新');
       }
+
+      // 清掉已经不在购物车、或不再支持泡好的标记
+      var cookedChanged = false;
+      Object.keys(state.cooked).forEach(function (id) {
+        var p = BY_ID[id];
+        if (!p || !state.cart[id] || cookFeeOf(p) <= 0) {
+          delete state.cooked[id];
+          cookedChanged = true;
+        }
+      });
+      if (cookedChanged) writeJSON(KEY_COOKED, state.cooked);
 
       renderList();
       renderBar();
@@ -810,6 +885,18 @@
   document.addEventListener('input', function (e) {
     var f = e.target.closest('.f.err');
     if (f) f.classList.remove('err');
+  });
+
+  // 购物车里勾「泡好送上门」
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest('[data-role="cook"]');
+    if (!el) return;
+    var id = el.dataset.id;
+    if (el.checked) state.cooked[id] = true;
+    else delete state.cooked[id];
+    writeJSON(KEY_COOKED, state.cooked);
+    renderBar();
+    renderSheet();
   });
 
   $('#cartOpen').addEventListener('click', function () { openSheet('cart'); });

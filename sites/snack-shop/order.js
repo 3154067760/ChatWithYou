@@ -10,6 +10,7 @@
 
   var KEY_MY_ORDERS = 'sb_myorders_v1';
   var KEY_CART = 'sb_cart_v2';
+  var KEY_COOKED = 'sb_cooked_v1';
 
   var state = {
     id: '',
@@ -98,12 +99,18 @@
 
   function reorder(o) {
     var cart = readJSON(KEY_CART, {});
+    var cooked = readJSON(KEY_COOKED, {});
     if (!cart || typeof cart !== 'object' || Array.isArray(cart)) cart = {};
+    if (!cooked || typeof cooked !== 'object' || Array.isArray(cooked)) cooked = {};
+
     (o.items || []).forEach(function (i) {
       if (!i.id) return;
       cart[i.id] = Math.min(99, Number(cart[i.id] || 0) + Number(i.qty || 1));
+      if (i.cooked) cooked[i.id] = true;
     });
+
     writeJSON(KEY_CART, cart);
+    writeJSON(KEY_COOKED, cooked);
     location.href = 'index.html';
   }
 
@@ -135,7 +142,8 @@
     var items = (o.items || []).map(function (i) {
       return '<div class="item-line">' +
         '<span class="q">×' + i.qty + '</span>' +
-        '<span class="n">' + esc(i.name) + '</span>' +
+        '<span class="n">' + esc(i.name) +
+          (i.cooked ? '<em class="cook-mark">泡好</em>' : '') + '</span>' +
         '<span class="p">¥' + money(i.price * i.qty) + '</span>' +
       '</div>';
     }).join('');
@@ -151,6 +159,7 @@
       timeline +
       '<section class="order-card">' +
         '<h2>商品</h2>' + items +
+        (o.cookFee ? '<div class="line"><span>泡好服务费</span><b>¥' + money(o.cookFee) + '</b></div>' : '') +
         '<div class="sum"><span>合计（含配送费）</span><b>¥' + money(o.total) + '</b></div>' +
       '</section>' +
       '<section class="order-card">' +
@@ -225,16 +234,17 @@
 
     var lookup =
       '<section class="lookup">' +
-        '<h2>查其他订单</h2>' +
-        '<p class="hint">换手机也能查：填下单时的手机号和订单号（小票上有）。</p>' +
+        '<h2>查订单进度</h2>' +
+        '<p class="hint">输入下单时填的手机号就行，能看到最近 10 单；记得订单号的话可以填上，查得更准。</p>' +
         '<form id="lookupForm" novalidate>' +
           '<label class="f"><span>手机号</span>' +
             '<input id="lkPhone" inputmode="numeric" maxlength="11" placeholder="11 位手机号"></label>' +
-          '<label class="f"><span>订单号</span>' +
-            '<input id="lkNo" maxlength="16" placeholder="#261025-1234"></label>' +
-          '<button class="btn-primary" type="submit">查询订单</button>' +
+          '<label class="f"><span>订单号（选填）</span>' +
+            '<input id="lkNo" maxlength="16" placeholder="不记得就留空"></label>' +
+          '<button class="btn-primary" type="submit">查询</button>' +
           '<p class="err" id="lkErr" hidden></p>' +
         '</form>' +
+        '<div id="lookupResults" class="lookup-results" hidden></div>' +
       '</section>';
 
     var mine = '';
@@ -275,6 +285,28 @@
     });
   }
 
+  function orderHref(o) {
+    return 'order.html?id=' + encodeURIComponent(o.id) + '&token=' + encodeURIComponent(o.token);
+  }
+
+  function renderResults(list) {
+    var box = $('#lookupResults');
+    if (!box) return;
+
+    box.hidden = false;
+    box.innerHTML =
+      '<h3>找到 ' + list.length + ' 单</h3>' +
+      list.map(function (o) {
+        var st = STATUS[o.status] || STATUS.new;
+        return '<a class="my-item" href="' + orderHref(o) + '">' +
+          '<div class="mi-main"><b>' + esc(o.no) + '</b>' +
+            '<small>' + timeText(o.createdAt) + ' · ¥' + money(o.total) + '</small></div>' +
+          '<span class="mi-status ' + st.cls + '">' + st.text + '</span>' +
+          '<span class="arrow">›</span>' +
+        '</a>';
+      }).join('');
+  }
+
   function bindLookup() {
     var form = $('#lookupForm');
     if (!form) return;
@@ -285,15 +317,12 @@
       var no = ($('#lkNo').value || '').trim();
       var err = $('#lkErr');
       var btn = form.querySelector('button');
+      var results = $('#lookupResults');
 
       err.hidden = true;
+      if (results) results.hidden = true;
       if (!/^1[3-9]\d{9}$/.test(phone)) {
         err.textContent = '手机号填得不对';
-        err.hidden = false;
-        return;
-      }
-      if (!no) {
-        err.textContent = '填一下订单号';
         err.hidden = false;
         return;
       }
@@ -303,15 +332,25 @@
 
       api('/api/orders/lookup', { method: 'POST', body: { phone: phone, no: no } })
         .then(function (data) {
-          remember(data.order, data.token);
-          location.href = 'order.html?id=' + encodeURIComponent(data.order.id) +
-            '&token=' + encodeURIComponent(data.token);
+          var list = (data && data.orders) || [];
+          if (!list.length) throw new Error('这个手机号还没下过单');
+
+          list.forEach(function (o) { remember(o, o.token); });
+
+          if (list.length === 1) {
+            location.href = orderHref(list[0]);
+            return;
+          }
+
+          renderResults(list);
+          btn.disabled = false;
+          btn.textContent = '查询';
         })
         .catch(function (error) {
-          err.textContent = (error && error.message) || '没查到，核对一下手机号和订单号';
+          err.textContent = (error && error.message) || '没查到，检查一下手机号';
           err.hidden = false;
           btn.disabled = false;
-          btn.textContent = '查询订单';
+          btn.textContent = '查询';
         });
     });
   }
