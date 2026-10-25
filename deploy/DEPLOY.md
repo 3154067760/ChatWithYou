@@ -1,4 +1,4 @@
-# leylish.work 部署指南
+﻿# leylish.work 部署指南
 
 将 **Pinyin Paradise（拼音小乐园）** 绑定到域名 **leylish.work**（Node 3010 提供静态前端）。
 
@@ -108,8 +108,9 @@ HTTPS：`sudo certbot --nginx -d leylish.work -d www.leylish.work`
 
 ```bash
 cd ~/ChatWithYou && git pull
-pm2 start deploy/snack-shop.ecosystem.js && pm2 save
-# 把 deploy/nginx-snack.conf 的 location 加到 nginx 配置，sudo nginx -t && sudo systemctl reload nginx
+export PORT=3020 HOST=0.0.0.0
+pm2 start sites/snack-shop/server.js --name snack-shop --update-env && pm2 save
+bash deploy/snack-shop.nginx.sh     # 写入 /snack 反代并 reload
 ```
 
 顾客：`https://leylish.work/snack/`
