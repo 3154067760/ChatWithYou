@@ -108,7 +108,7 @@ HTTPS：`sudo certbot --nginx -d leylish.work -d www.leylish.work`
 
 ```bash
 cd ~/ChatWithYou && git pull
-export PORT=3020 HOST=0.0.0.0
+export PORT=3020 HOST=127.0.0.1
 pm2 start sites/snack-shop/server.js --name snack-shop --update-env && pm2 save
 bash deploy/snack-shop.nginx.sh     # 写入 /snack 反代并 reload
 ```

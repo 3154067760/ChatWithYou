@@ -1,4 +1,4 @@
-# 宿舍补给站 · 部署到 leylish.work/snack/
+﻿# 宿舍补给站 · 部署到 leylish.work/snack/
 
 **已上线**：<https://leylish.work/snack/>
 后台：<https://leylish.work/snack/admin.html>（账号 `gyq`，密码见 `server.js`）
@@ -42,7 +42,7 @@ ls sites/snack-shop
 
 ```bash
 cd ~/ChatWithYou
-export PORT=3020 HOST=0.0.0.0
+export PORT=3020 HOST=127.0.0.1
 pm2 start sites/snack-shop/server.js --name snack-shop --update-env
 pm2 save
 ```

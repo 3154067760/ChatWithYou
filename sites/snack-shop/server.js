@@ -254,6 +254,19 @@ function parseCookies(req) {
   return out;
 }
 
+// 在 Nginx 后面时，req.socket.remoteAddress 永远是 127.0.0.1，
+// 登录限流要按真实访客 IP 算，否则一个人乱试就能把店主锁住。
+function clientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length) {
+    const first = forwarded.split(',')[0].trim();
+    if (first) return first;
+  }
+  const real = req.headers['x-real-ip'];
+  if (typeof real === 'string' && real.trim()) return real.trim();
+  return (req.socket.remoteAddress || '') + '';
+}
+
 function currentUser(req) {
   const token = parseCookies(req).sb_sid;
   if (!token) return null;
@@ -530,7 +543,7 @@ async function handleApi(req, res, pathname, url) {
 
   // 登录
   if (pathname === '/api/login' && method === 'POST') {
-    const ip = (req.socket.remoteAddress || '') + '';
+    const ip = clientIp(req);
     const fail = loginFails.get(ip);
     if (fail && fail.until > Date.now()) {
       return sendJSON(res, 429, { error: '试错次数太多了，等一分钟再试' });
