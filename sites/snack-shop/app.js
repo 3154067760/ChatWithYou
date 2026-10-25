@@ -19,6 +19,7 @@
   rebuildById();
 
   var KEY_CART = 'sb_cart_v2';
+  var KEY_MY_ORDERS = 'sb_myorders_v1';
   var apiMode = false;
   var PAY_QR = false;
   var PAY_QR_VERSION = 0;
@@ -353,7 +354,10 @@
         '<div class="ono">' + esc(order.no) + '</div>' +
         payBox +
         '<div class="receipt">' + esc(receiptText(order)) + '</div>' +
-        '<button class="btn-primary" type="button" data-act="copy" style="margin-top:14px">复制订单信息</button>' +
+        (synced && order.token
+          ? '<a class="btn-primary" href="' + sbUrl('/order.html') + '?id=' + order.id + '&token=' + order.token + '" style="margin-top:14px;text-decoration:none">查看订单进度</a>'
+          : '') +
+        '<button class="btn-link" type="button" data-act="copy">复制订单信息</button>' +
         '<button class="btn-link" type="button" data-act="done">继续点单</button>' +
       '</div>';
   }
@@ -523,12 +527,28 @@
     };
   }
 
+  function rememberOrder(order) {
+    if (!order || !order.id || !order.token) return;
+    var list = readJSON(KEY_MY_ORDERS, []);
+    if (!Array.isArray(list)) list = [];
+    list = list.filter(function (x) { return x && x.id !== order.id; });
+    list.unshift({
+      id: order.id,
+      token: order.token,
+      no: order.no,
+      total: order.total,
+      createdAt: order.createdAt || Date.now()
+    });
+    writeJSON(KEY_MY_ORDERS, list.slice(0, 20));
+  }
+
   function finishOrder(order, synced) {
     state.cart = {};
     writeJSON(KEY_CART, state.cart);
     state.lastOrder = order;
     state.synced = !!synced;
     state.view = 'success';
+    if (synced) rememberOrder(order);
     renderBar();
     renderList();
     renderSheet();

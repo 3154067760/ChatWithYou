@@ -215,6 +215,16 @@ store.orders.forEach(function (o) {
   }
 });
 
+// 老订单补一个查询凭证（顾客凭它看进度，不用登录）
+let tokenPatched = false;
+store.orders.forEach(function (o) {
+  if (!o.token) {
+    o.token = crypto.randomBytes(12).toString('hex');
+    tokenPatched = true;
+  }
+});
+if (tokenPatched) saveOrders();
+
 // 老商品补上库存（默认 20）
 let stockPatched = false;
 store.products.forEach(function (p) {
@@ -358,6 +368,39 @@ function statsOf() {
   };
 }
 
+function publicOrder(o) {
+  return {
+    id: o.id,
+    no: o.no,
+    status: o.status,
+    payment: { status: (o.payment && o.payment.status) || 'unpaid' },
+    items: o.items,
+    goods: o.goods,
+    fee: o.fee,
+    total: o.total,
+    build: o.build,
+    room: o.room,
+    phone: String(o.phone || '').replace(/^(\d{3})\d{4}(\d{4})$/, '$1****$2'),
+    note: o.note,
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+  };
+}
+
+// 换设备查询限流：同一 IP 一分钟最多 10 次
+const lookupHits = new Map();
+
+function allowLookup(ip) {
+  const now = Date.now();
+  const rec = lookupHits.get(ip);
+  if (!rec || rec.reset <= now) {
+    lookupHits.set(ip, { count: 1, reset: now + 60 * 1000 });
+    return true;
+  }
+  rec.count += 1;
+  return rec.count <= 10;
+}
+
 function makeOrderNo() {
   const d = new Date();
   const p = function (n) { return n < 10 ? '0' + n : String(n); };
@@ -444,6 +487,7 @@ async function createOrder(req, res) {
   const now = Date.now();
   const order = {
     id: crypto.randomBytes(8).toString('hex'),
+    token: crypto.randomBytes(12).toString('hex'),
     no: makeOrderNo(),
     items: lines,
     goods: goods,
@@ -739,6 +783,44 @@ async function handleApi(req, res, pathname, url) {
       list = list.filter(function (o) { return o.status === status; });
     }
     return sendJSON(res, 200, { orders: list, stats: statsOf() });
+  }
+
+  // 顾客查自己的订单进度（凭 token，不用登录）
+  const statusMatch = pathname.match(/^\/api\/orders\/([A-Za-z0-9-]+)\/status$/);
+  if (statusMatch && method === 'GET') {
+    const order = store.orders.filter(function (o) { return o.id === statusMatch[1]; })[0];
+    if (!order) return sendJSON(res, 404, { error: '订单不存在' });
+
+    const token = url.searchParams.get('token') || '';
+    if (!order.token || !safeEqual(token, order.token)) {
+      return sendJSON(res, 403, { error: '查询链接不对，回点单页重新点「订单进度」' });
+    }
+    return sendJSON(res, 200, { order: publicOrder(order) });
+  }
+
+  // 换手机/换设备查询：手机号 + 订单号
+  if (pathname === '/api/orders/lookup' && method === 'POST') {
+    if (!allowLookup(clientIp(req))) {
+      return sendJSON(res, 429, { error: '查得太频繁了，等一分钟再试' });
+    }
+
+    let body;
+    try { body = await readBody(req); }
+    catch (e) { return sendJSON(res, 400, { error: e.message }); }
+
+    const phone = String(body.phone || '').replace(/\D/g, '');
+    let no = String(body.no || '').trim().toUpperCase();
+    if (no && no.charAt(0) !== '#') no = '#' + no;
+
+    if (!/^1[3-9]\d{9}$/.test(phone)) return sendJSON(res, 400, { error: '手机号填得不对' });
+    if (!/^#\d{6}-\d{4}$/.test(no)) return sendJSON(res, 400, { error: '订单号格式像 #261025-1234' });
+
+    const order = store.orders.filter(function (o) {
+      return o.phone === phone && String(o.no).toUpperCase() === no;
+    })[0];
+
+    if (!order) return sendJSON(res, 404, { error: '没找到这个订单，核对一下手机号和订单号' });
+    return sendJSON(res, 200, { order: publicOrder(order), token: order.token });
   }
 
   // 顾客点「我已付款」（公开，凭不可猜的订单 id）
